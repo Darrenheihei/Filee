@@ -1,0 +1,54 @@
+<!-- Compress video: shown before videos are compressed from the donut (RadialController). The percentage chosen
+     here is how large each video may stay next to its own size; the hint reads what that makes of these files.
+     Compress starts the conversion; Cancel or closing the window starts nothing. -->
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Filee.App.ViewModels"
+        x:Class="Filee.App.Views.VideoCompressWindow"
+        x:DataType="vm:VideoCompressViewModel"
+        Title="{DynamicResource preset.compress_video}"
+        Icon="avares://Filee/Assets/Icons/filee.ico"
+        Width="520" Height="440" MinWidth="440" MinHeight="360"
+        WindowStartupLocation="CenterScreen">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Padding="20,12" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource SubtleBorderBrush}"
+            Background="{DynamicResource SurfaceBrush}">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button x:Name="Cancel" Content="{DynamicResource common.cancel}" Click="OnCancel" IsCancel="True" />
+        <Button x:Name="Compress" Classes="accent" Content="{DynamicResource video_compress.convert}" Click="OnCompress"
+                IsDefault="True" IsEnabled="{Binding CanCompress}" />
+      </StackPanel>
+    </Border>
+    <DockPanel Margin="20,18,20,14">
+      <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,12">
+        <TextBlock Classes="h2" Text="{DynamicResource preset.compress_video}" />
+        <TextBlock Classes="caption" TextWrapping="Wrap" Text="{DynamicResource video_compress.hint}" />
+      </StackPanel>
+      <!-- The percentage, and what it makes of these files. -->
+      <Border DockPanel.Dock="Bottom" Margin="0,12,0,0" Padding="14,12" CornerRadius="10"
+              Background="{DynamicResource SurfaceAltBrush}">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+            <TextBlock Grid.Column="0" Classes="label" VerticalAlignment="Center" Text="{DynamicResource video_compress.percent}" />
+            <Slider x:Name="PercentSlider" Grid.Column="1" Minimum="5" Maximum="95" TickFrequency="1" IsSnapToTickEnabled="True"
+                    Value="{Binding Percent}" AutomationProperties.Name="{DynamicResource video_compress.percent}" />
+            <TextBlock Grid.Column="2" Classes="label" VerticalAlignment="Center" MinWidth="48" TextAlignment="Right" Text="{Binding PercentText}" />
+          </Grid>
+          <TextBlock x:Name="SizeHint" Classes="caption" Text="{Binding SizeHint}" />
+          <TextBlock x:Name="FloorHint" Classes="caption" Classes.danger="{Binding BelowFloor}" IsVisible="{Binding HasFloor}"
+                     TextWrapping="Wrap" Text="{Binding FloorText}" />
+        </StackPanel>
+      </Border>
+      <ListBox x:Name="Files" ItemsSource="{Binding Sources}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:VideoCompressSource">
+            <Grid ColumnDefinitions="*,Auto" Margin="4,6">
+              <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
+              <TextBlock Grid.Column="1" Classes="caption" Margin="12,0,0,0" Text="{Binding Size}" />
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </DockPanel>
+  </DockPanel>
+</Window>

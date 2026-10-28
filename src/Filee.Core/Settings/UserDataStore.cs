@@ -931,6 +931,18 @@ internal static class SettingsMigrations
         //      donut; custom claims stay put.
         if (from < 54)
             changed |= LearnExtensions(profiles, out _, ["001", "7z.001", "zip.001", "tar.001"]);
+        // v55: "Compress video" asks how large the videos may stay (a percentage each one keeps of its own size). A
+        //      preset saved by an earlier version gets the question too, while it is still the video compressor that
+        //      shipped (an MP4 target); one renamed to another target is the user's own and stays as it is.
+        if (from < 55)
+        {
+            if (presets.FirstOrDefault(p => p.Id == "compress-video") is { } compress
+                && compress.TargetFormat == "mp4" && !compress.Media.AskSizePercent)
+            {
+                compress.Media.AskSizePercent = true;
+                changed = true;
+            }
+        }
         return changed;
     }
 

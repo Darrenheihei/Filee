@@ -126,6 +126,9 @@ To undo it, remove the entries in Windows Security → App & browser control →
 - **Two sides to every donut**: press <kbd>Tab</kbd> or turn the mouse wheel while it is open to flip it over to less common formats and tools.
 - **Crop before converting**: the Crop slice opens pictures one by one.
   Drag the frame, pick a ratio, and only that part is saved.
+- **Compress videos to a size you pick**: the Compress video slice asks how large each one may stay — a
+  percentage of its own size — and shows how large the results will be before it starts. The window also
+  knows the smallest each video can get, so a size below that never starts.
 - **Many files at once**, in parallel.
   Routes with several steps (HWP → HWPX → DOCX) are found automatically.
 - **Watch folders** convert every file that lands in them.
@@ -195,6 +198,26 @@ pwsh build/fetch-engines.ps1 -Only rhwp,pandoc   # optional engines
 dotnet run --project src/Filee.App
 dotnet test
 ```
+
+`dotnet run` is the app itself (add `FILEE_DATA_DIR=<empty folder>` in front of it to keep a copy for testing
+separate from an installed Filee). To get a real desktop app instead, build a package on the target system
+with PowerShell 7 (`brew install --cask powershell` on a Mac):
+
+```bash
+pwsh build/build-portable.ps1
+```
+
+That builds a self-contained app with the bundled engines and puts it in `Releases/`: a `.tar.gz` (whose
+`install.sh` also adds the `filee` command) and a checksum file. On a Mac it also makes a `Filee.app`
+and a `.dmg` — open the dmg and drag Filee.app into Applications. Targets are `linux-x64`, `linux-arm64`,
+`osx-x64` and `osx-arm64` (a Mac without a `-Runtime` builds for its own chip).
+
+The macOS build is signed ad-hoc, so it runs on the Mac that built it. For other people's Macs, sign with
+your Developer ID (`-SigningIdentity "Developer ID Application: …"`) and notarize — the script doesn't
+notarize, which is why macOS counts as a preview. After installing, Filee asks for Accessibility
+(for the drag gestures) and Finder Automation (for reading the selection). FFmpeg, Ghostscript and
+LibreOffice are not bundled on macOS: Filee finds them on the system, or you pick them in Settings →
+Engines.
 
 [Architecture](docs/ARCHITECTURE.md) · [Engines](docs/ENGINES.md) · [Adding a converter](docs/ADDING-A-CONVERTER.md) · [Adding a language](docs/ADDING-A-LANGUAGE.md) · [Contributing](CONTRIBUTING.md)
 

@@ -749,6 +749,11 @@ public sealed class JobQueue : IAsyncDisposable
         if (IsEmptyFile(file.SourcePath))
             return Fail(file, "error.empty_file", null);
 
+        // A percentage of the original ("Compress video" asks for one) becomes this file's own limit in megabytes,
+        // so every engine and the final check below work with the size they know.
+        if (runWith.Media.MaxSizePercent > 0 && runWith.Media.MaxSizeMb == 0)
+            runWith = WithPercentLimit(runWith, file.SourcePath);
+
         var target = !finalOutput ? intermediate
             : runWith.TargetFormat == BuiltInData.SameAsSource ? source.Id
             : runWith.TargetFormat;
@@ -949,6 +954,24 @@ public sealed class JobQueue : IAsyncDisposable
             var copy = preset.Clone();
             copy.Image.MaxSizeMb = 0;
             copy.Media.MaxSizeMb = 0;
+            return copy;
+        }
+
+        static Preset WithPercentLimit(Preset preset, string source)
+        {
+            long bytes;
+            try
+            {
+                bytes = new FileInfo(source).Length;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                return preset; // no size to a percentage of: the conversion runs without a limit
+            }
+            if (bytes <= 0)
+                return preset;
+            var copy = preset.Clone();
+            copy.Media.MaxSizeMb = SizeLimit.FromPercent(bytes, copy.Media.MaxSizePercent) / 1_000_000.0;
             return copy;
         }
 

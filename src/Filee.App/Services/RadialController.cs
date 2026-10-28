@@ -24,6 +24,7 @@ using Filee.App.Services.Triggers;
 using Filee.App.ViewModels;
 using Filee.App.Views;
 using Filee.Core.Conversion;
+using Filee.Core.Formats;
 using Filee.Core.Platform;
 using Filee.Core.Presets;
 using Filee.Core.Profiles;
@@ -346,6 +347,16 @@ public sealed class RadialController(
             return;
         }
 
+        // "Compress video" asks how large the videos may stay: a window for the percentage each one keeps of its own
+        // size, and the conversion starts when it is answered. Files from a browser have no size yet to a percentage
+        // of, and a selection with a file that isn't a video compresses as the preset is saved.
+        if (preset.Media.AskSizePercent && web is null && sources.All(IsVideoFile))
+        {
+            Close(animate: false);
+            _ = CompressByPercentAsync(sources, preset.Clone());
+            return;
+        }
+
         // "Ask every time" (#521): the save dialog first; the toast shows the job, the donut has closed for the dialog.
         // shortcut: files from a browser aren't asked about, they save into the download folder as "next to the source".
         if (preset.Output.AskEveryTime && web is null)
@@ -391,6 +402,27 @@ public sealed class RadialController(
             web?.Dispose();
         }
     }
+
+    private async Task CompressByPercentAsync(IReadOnlyList<string> sources, Preset preset)
+    {
+        try
+        {
+            if (await windows.ChooseVideoCompressPercentAsync(sources) is { } percent)
+            {
+                preset.Media.MaxSizePercent = percent;
+                log.LogInformation("Compressing {Count} video(s) with preset {Preset} to {Percent:0}% of their size",
+                    sources.Count, preset.Id, percent);
+                conversions.Start(sources, preset);
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            log.LogError(ex, "Could not start the compression");
+        }
+    }
+
+    /// <summary>True for the files the percentage window makes sense for: videos, as folders were already left out.</summary>
+    private static bool IsVideoFile(string path) => FormatRegistry.Detect(path)?.Category == FormatCategory.Video;
 
     /// <summary>
     /// "Merge images": the layout chosen in the merge order window (<paramref name="chosen"/>, a copy of the preset)

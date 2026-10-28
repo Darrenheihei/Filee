@@ -76,4 +76,47 @@ public class SizeLimitTests
         // A new list each time: adding one never changes the next.
         Assert.NotSame(places[0], BuiltInData.PlacePresets()[0]);
     }
+
+    [Theory]
+    [InlineData(1_000, 25, 250)]
+    [InlineData(1_000, 5, 50)]
+    [InlineData(1_000, 100, 1_000)]
+    [InlineData(1_000, 150, 1_000)] // a limit never grows the file
+    [InlineData(1_000, 0, 0)]
+    [InlineData(0, 50, 0)]
+    public void A_percentage_of_a_file_s_size_is_its_limit(long bytes, double percent, long expected) =>
+        Assert.Equal(expected, SizeLimit.FromPercent(bytes, percent));
+
+    [Fact]
+    public async Task A_percentage_becomes_each_video_s_own_limit_in_megabytes()
+    {
+        using var dir = new TempDir();
+        var video = dir.File("clip.mp4", new string('x', 1_000));
+        var fake = new FakeConverter("fake", new ConversionEdge("mp4", "mp4"));
+        await using var queue = new JobQueue(new ConverterCatalog([fake]));
+        var preset = new Preset { TargetFormat = "mp4", Media = { MaxSizePercent = 25 } };
+
+        await queue.RunAsync(new ConversionJob([video], preset, "MP4"));
+
+        var step = Assert.Single(fake.Presets);
+        Assert.Equal(0.00025, step.Media.MaxSizeMb, 9); // 1,000 bytes × 25 % = 250 bytes of this video's own size
+        Assert.Equal((25.0, 0.0), (preset.Media.MaxSizePercent, preset.Media.MaxSizeMb)); // the user's preset keeps the percentage
+    }
+
+    [Fact]
+    public async Task A_video_that_misses_its_percentage_is_refused_rather_than_handed_over_too_large()
+    {
+        // The fake engine writes its result as it is: the queue checks it against the percentage's limit.
+        using var dir = new TempDir();
+        var video = dir.File("clip.mp4", new string('x', 100));
+        await using var queue = new JobQueue(new ConverterCatalog([new FakeConverter("fake", new ConversionEdge("mp4", "mp4"))]));
+        var job = new ConversionJob([video], new Preset { TargetFormat = "mp4", Media = { MaxSizePercent = 5 } }, "MP4");
+
+        await queue.RunAsync(job);
+
+        var file = Assert.Single(job.Files);
+        Assert.Equal(FileState.Failed, file.State);
+        Assert.Equal("error.over_size_limit", file.ErrorKey);
+        Assert.Empty(job.Outputs);
+    }
 }

@@ -850,6 +850,19 @@ public sealed class MediaOptions
     /// </summary>
     public double MaxSizeMb { get; set; }
 
+    /// <summary>
+    /// Keep each video under this percentage of its own size ("Compress video" asks which); 0 = off. The queue turns it
+    /// into the megabytes of <see cref="MaxSizeMb"/> for every file it converts, from that file's own size.
+    /// </summary>
+    public double MaxSizePercent { get; set; }
+
+    /// <summary>
+    /// The donut asks how large the videos may stay before this preset converts them (a window for the percentage of
+    /// <see cref="MaxSizePercent"/>); the command line and watch folders always convert as the preset is saved. Only the
+    /// built-in "Compress video" sets it.
+    /// </summary>
+    public bool AskSizePercent { get; set; }
+
     /// <summary>Audio bitrate in kbit/s for lossy audio; 0 uses a good default for the format.</summary>
     public int AudioBitrateKbps { get; set; }
 
