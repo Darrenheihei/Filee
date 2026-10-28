@@ -252,8 +252,10 @@ public static class BuiltInData
         new()
         {
             // H.264 at the Small quality, at most 1080p: plays everywhere, a fraction of a phone video's size.
+            // The donut asks how large the videos may stay first; the queue turns the answer into their limits.
             Id = "compress-video", NameKey = "preset.compress_video", TargetFormat = "mp4",
-            Media = { Quality = MediaQuality.Small, MaxHeight = 1080 }, Output = { FileNamePattern = "{name}_compressed", OnlyIfSmaller = true },
+            Media = { Quality = MediaQuality.Small, MaxHeight = 1080, AskSizePercent = true },
+            Output = { FileNamePattern = "{name}_compressed", OnlyIfSmaller = true },
         },
         new()
         {

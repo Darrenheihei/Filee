@@ -792,7 +792,10 @@ in the preset library only). Video and audio need FFmpeg.
 - **Compress image / video / audio** re-encode smaller (quality 75, never above a JPEG's own and PNG at zlib level 9;
   H.264 at the Small quality, at most 1080p; AAC at the Small quality). A copy in the same format that isn't smaller is
   replaced by the source, with the same notice as Compress PDF (`OutputRule.OnlyIfSmaller`); under "Save as ZIP" the
-  source goes into the ZIP instead.
+  source goes into the ZIP instead. From the donut, **Compress video** first asks how large the videos may stay: a
+  window picks the percentage each one keeps of its own size (`MediaOptions.AskSizePercent`,
+  `MediaOptions.MaxSizePercent`), with a hint of what that makes of these files, and the queue turns the answer into
+  every video's own size limit. The command line and watch folders compress as the preset is saved.
 - **Extract audio** copies AAC or ALAC into M4A without an encode (`MediaOptions.CopyAudioWhenPossible`); other sound
   is encoded to AAC.
 - **Merge videos** copies the clips with the concat demuxer only when all share the codec setup (ffprobe's extradata

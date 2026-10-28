@@ -25,6 +25,13 @@ public static class SizeLimit
     };
 
     /// <summary>
+    /// The limit in bytes when a file of <paramref name="sourceBytes"/> keeps <paramref name="percent"/> of its own size
+    /// ("Compress video" asks for one). A percentage over 100 keeps the file as it is: a limit never grows it.
+    /// </summary>
+    public static long FromPercent(long sourceBytes, double percent) =>
+        (long)(sourceBytes * Math.Clamp(percent, 0, 100) / 100);
+
+    /// <summary>
     /// Refuses when a result is over its limit. The engines fit pictures and videos where they can; this catches the
     /// routes they don't (HEIC, CAD and 3D renders, animations and pages, joined videos, "Remove metadata").
     /// </summary>

@@ -47,9 +47,11 @@ public sealed class WindowService(ILocalizer loc, IServiceProvider services, Mem
     internal IReadOnlyCollection<SpreadsheetPrintStudioWindow> SpreadsheetStudios => _spreadsheetStudios;
     private MergeOrderWindow? _mergeOrder;
     private PdfPageEditorWindow? _pdfPageEditor;
+    private VideoCompressWindow? _videoCompress;
 
     internal MergeOrderWindow? MergeOrder => _mergeOrder;
     internal PdfPageEditorWindow? PdfPageEditor => _pdfPageEditor;
+    internal VideoCompressWindow? VideoCompress => _videoCompress;
 
     private void PrepareWindow(Window window) => services.GetService<ThemeService>()?.ApplyWindowClass(window);
 
@@ -84,6 +86,32 @@ public sealed class WindowService(ILocalizer loc, IServiceProvider services, Mem
         await closed.Task;
         if (dialog.Result is not null && images)
             vm.ApplyTo(preset!.Image);
+        return dialog.Result;
+    }
+
+    /// <summary>
+    /// Asks how large the videos of a "Compress video" drop may stay: the percentage each one keeps of its own size
+    /// (<see cref="VideoCompressViewModel.MinPercent"/> to <see cref="VideoCompressViewModel.MaxPercent"/>).
+    /// Null when the window was cancelled or closed.
+    /// </summary>
+    public async Task<double?> ChooseVideoCompressPercentAsync(IReadOnlyList<string> files)
+    {
+        _videoCompress?.Close();
+        var vm = new VideoCompressViewModel(files, loc);
+        var dialog = new VideoCompressWindow { DataContext = vm };
+        PrepareWindow(dialog);
+        var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        dialog.Closed += (_, _) =>
+        {
+            if (_videoCompress == dialog) _videoCompress = null;
+            closed.TrySetResult();
+        };
+        _videoCompress = dialog;
+        dialog.Show();
+        dialog.Activate();
+        // The floor (the smallest the videos can get) is asked from ffprobe beside the open window.
+        _ = vm.ProbeMinimumsAsync();
+        await closed.Task;
         return dialog.Result;
     }
 

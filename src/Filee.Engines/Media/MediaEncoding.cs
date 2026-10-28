@@ -467,6 +467,18 @@ internal static partial class MediaEncoding
     }
 
     /// <summary>
+    /// The size a video of <paramref name="seconds"/> can't go below (<see cref="ForSizeLimit"/> keeps at most 96 kbit/s
+    /// of sound a track and <see cref="FitBitrateKbps"/> needs 100 kbit/s of video to encode): below it a size limit is
+    /// refused with <c>error.over_size_limit</c>, so the percentage window shows this floor instead of letting the
+    /// conversion fail.
+    /// </summary>
+    internal static long MinSizeBytes(double seconds, int audioTracks)
+    {
+        var kbps = 100 + 96 * audioTracks;
+        return (long)Math.Ceiling(kbps * 1000.0 * seconds / 8 / 0.95);
+    }
+
+    /// <summary>
     /// The options a video with a size limit is encoded with, and the video bitrate that fits (0 when the length is
     /// unknown or nothing fits): the video is never copied as it is (<see cref="CanCopyVideo"/>), the sound is at most
     /// 96 kbit/s a track, and no graphics chip encodes, since software rate control keeps to the cap.
