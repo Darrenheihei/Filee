@@ -190,8 +190,11 @@ public sealed partial class FfmpegConverter(ILogger? logger = null) : IConverter
                 : await HardwareProbe.SelectAsync(ffmpeg, codec, tenBit, encoders, _logger, cancellationToken);
         }
 
-        // Video → animated GIF / APNG can play faster or slower (the image options' playback speed).
-        var speed = step.To is "gif" or "apng" ? step.Preset.Image.PlaybackSpeed : 1;
+        // Video → animated GIF / APNG can play faster or slower (the image options' playback speed); so can a video
+        // that is encoded again (the media options' Speed, the "Change video speed" window). FFmpeg reports the
+        // position in the output, which a speed change makes longer or shorter.
+        var speed = step.To is "gif" or "apng" ? step.Preset.Image.PlaybackSpeed
+            : MediaEncoding.VideoTargets.ContainsKey(step.To) ? step.Preset.Media.SpeedFactor : 1;
         IReadOnlyList<FfmpegPass> Plan(HardwareEncoder? encoder) => still
             ? MediaEncoding.PlanStill(input, output, step.To, media, info)
             : MediaEncoding.Plan(input, output, step.To, media, info, step.WorkDirectory, cover, encoders, encoder, speed);

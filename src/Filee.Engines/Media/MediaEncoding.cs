@@ -246,6 +246,8 @@ internal static partial class MediaEncoding
             : info.AudioTracks;
 
         // A clip: FFmpeg seeks the input and decodes from the key frame before the start, so the first frame is exact.
+        // A speed change re-times the picture (setpts); the sound keeps its pitch through chained atempo steps.
+        var timing = SpeedTiming(options.SpeedFactor);
         List<string> args = [.. Common, .. clip is { } part ? ClipInput(part) : [], "-i", input, "-map", "0:V:0"];
         for (var i = 0; i < tracks.Count; i++)
             args.AddRange(["-map", $"0:a:{i}"]);
@@ -261,13 +263,13 @@ internal static partial class MediaEncoding
         {
             // VA-API's device is a global option, so it goes before the input.
             args.InsertRange(Common.Length, HardwareVideo.InputArguments(hardware));
-            args.AddRange(["-vf", ScaleFilter(options.MaxHeight) + HardwareVideo.FilterSuffix(hardware, HardwareVideo.TenBit(hardware.Codec, video))]);
+            args.AddRange(["-vf", timing + ScaleFilter(options.MaxHeight) + HardwareVideo.FilterSuffix(hardware, HardwareVideo.TenBit(hardware.Codec, video))]);
             args.AddRange(HardwareVideo.CodecArguments(hardware, target, options.Quality, video, options.MaxHeight));
         }
         else
         {
             var pal = IsPal(video.FrameRate);
-            args.AddRange(["-vf", target is "vob" or "dv" ? DvdOrDvFilter(video, pal) : ScaleFilter(options.MaxHeight)]);
+            args.AddRange(["-vf", target is "vob" or "dv" ? timing + DvdOrDvFilter(video, pal) : timing + ScaleFilter(options.MaxHeight)]);
             args.AddRange(VideoCodecArguments(target, VideoEncoder(target, spec.VideoCodec!, options.VideoCodec, encoders), options.Quality, video, pal));
         }
 
@@ -282,6 +284,10 @@ internal static partial class MediaEncoding
                 : AudioCodecArguments(target, spec.AudioCodec, options, tracks[i], inVideo: true);
             args.AddRange(tracks.Count == 1 ? trackArgs : ForAudioTrack(trackArgs, i));
         }
+        // -af without a stream specifier reaches every mapped track: all of them play at the video's speed.
+        var tempo = SpeedAudioFilter(options.SpeedFactor);
+        if (tempo.Length > 0 && tracks.Count > 0)
+            args.AddRange(["-af", tempo]);
 
         args.AddRange(MetadataArguments());
         args.AddRange(ContainerArguments(target));
@@ -382,8 +388,9 @@ internal static partial class MediaEncoding
     /// </summary>
     internal static bool CanCopyVideo(string target, VideoStreamInfo video, MediaOptions options)
     {
-        // A size limit encodes the video, so its bitrate can be capped (ForSizeLimit).
-        if (options.Quality == MediaQuality.Small || options.MaxSizeMb > 0 || options.MaxHeight > 0 && video.DisplayHeight > Math.Max(16, options.MaxHeight)
+        // A size limit encodes the video, so its bitrate can be capped (ForSizeLimit). So does a speed change (setpts).
+        if (options.Quality == MediaQuality.Small || options.MaxSizeMb > 0 || options.SpeedFactor != 1
+            || options.MaxHeight > 0 && video.DisplayHeight > Math.Max(16, options.MaxHeight)
             || video.Codec is not { } codec || !Remuxable.TryGetValue(target, out var codecs))
             return false;
         var takes = MediaCodecs.Effective(target, options.VideoCodec) switch
@@ -421,11 +428,11 @@ internal static partial class MediaEncoding
     }
 
     /// <summary>
-    /// True when the audio stream can be copied: the container takes it, no bitrate is set and the channels stay
-    /// as they are.
+    /// True when the audio stream can be copied: the container takes it, no bitrate is set, the channels stay
+    /// as they are and the video is not sped up (<c>atempo</c> needs the sound decoded).
     /// </summary>
     internal static bool CanCopyAudio(string target, AudioStreamInfo audio, MediaOptions options) =>
-        options.Quality != MediaQuality.Small && options.AudioBitrateKbps <= 0
+        options.SpeedFactor == 1 && options.Quality != MediaQuality.Small && options.AudioBitrateKbps <= 0
         && (options.AudioChannels is not (1 or 2) || options.AudioChannels == audio.Channels)
         && Remuxable.TryGetValue(target, out var codecs) && audio.Codec is { } codec && codecs.Audio.Contains(codec);
 
@@ -999,6 +1006,25 @@ internal static partial class MediaEncoding
     /// <summary>Images have no pixel aspect ratio: anamorphic video (DV, DVD) is stretched to square pixels first.</summary>
     internal static string SquarePixels(VideoStreamInfo video) =>
         Math.Abs(video.SampleAspect - 1) > 0.01 ? "scale=w='trunc(iw*sar/2)*2':h=ih,setsar=1," : "";
+
+    /// <summary>
+    /// The <c>setpts</c> that re-times the picture for a speed change, first in the video filter chain
+    /// (<see cref="GifFrames"/> does the same for animations); empty at the video's own speed.
+    /// </summary>
+    private static string SpeedTiming(double speed) =>
+        speed is > 0 and not 1 ? $"setpts=PTS/{speed.ToString("0.###", CultureInfo.InvariantCulture)}," : "";
+
+    /// <summary>
+    /// The chained <c>atempo</c> that gives the sound a speed change's pace without the chipmunk pitch
+    /// (<see cref="Tempo"/> breaks x0.1 to x10 into steps every FFmpeg takes); empty at the video's own speed.
+    /// </summary>
+    private static string SpeedAudioFilter(double speed)
+    {
+        var steps = Tempo(speed);
+        return steps.Count == 0 ? "" : string.Join("", steps.Select(step => $"atempo={step.ToString("0.###", CultureInfo.InvariantCulture)},"))
+            [..^1];
+    }
+
 
     // ───────────────────────── Still frame ─────────────────────────
 

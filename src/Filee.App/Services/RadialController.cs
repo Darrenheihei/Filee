@@ -357,6 +357,16 @@ public sealed class RadialController(
             return;
         }
 
+        // "Change video speed" asks how fast the videos play: a window for the factor (x0.1 to x10, the sound's pitch
+        // kept), and the conversion starts when it is answered. Files from a browser and selections with a file that
+        // isn't a video convert as the preset is saved.
+        if (preset.Media.AskSpeed && web is null && sources.All(IsVideoFile))
+        {
+            Close(animate: false);
+            _ = ChangeSpeedAsync(sources, preset.Clone());
+            return;
+        }
+
         // "Ask every time" (#521): the save dialog first; the toast shows the job, the donut has closed for the dialog.
         // shortcut: files from a browser aren't asked about, they save into the download folder as "next to the source".
         if (preset.Output.AskEveryTime && web is null)
@@ -418,6 +428,28 @@ public sealed class RadialController(
         catch (Exception ex) when (ex is not OutOfMemoryException)
         {
             log.LogError(ex, "Could not start the compression");
+        }
+    }
+
+    /// <summary>
+    /// "Change video speed": the factor chosen in the window goes into a copy of the preset, and the videos convert
+    /// with it (the picture re-timed, the sound's pitch kept).
+    /// </summary>
+    private async Task ChangeSpeedAsync(IReadOnlyList<string> sources, Preset preset)
+    {
+        try
+        {
+            if (await windows.ChooseVideoSpeedAsync(sources) is { } speed)
+            {
+                preset.Media.Speed = speed;
+                log.LogInformation("Changing the speed of {Count} video(s) with preset {Preset} to {Speed:0.00}x",
+                    sources.Count, preset.Id, speed);
+                conversions.Start(sources, preset);
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            log.LogError(ex, "Could not start the speed change");
         }
     }
 
