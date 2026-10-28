@@ -943,6 +943,35 @@ internal static class SettingsMigrations
                 changed = true;
             }
         }
+        // v56: "Change video speed" (the donut asks for the playback speed in a window), after the everyday media
+        //      tools as in a new library, and on the front of the video donut after "to-avi" when the user hasn't put
+        //      it on either face and the front has room, else on the back before "One ZIP" when that has room.
+        if (from < 56)
+        {
+            var speed = BuiltInData.SpeedPresets().Single();
+            if (presets.All(p => p.Id != speed.Id))
+            {
+                var at = presets.FindLastIndex(p => p.Id is "remove-metadata" or "merge-audio" or "compress-audio"
+                    or "merge-videos" or "compress-video");
+                presets.Insert(at < 0 ? presets.Count : at + 1, speed);
+                changed = true;
+            }
+            if (profiles.FirstOrDefault(p => p.Id == "video") is { PresetIds: { } front } videoProfile
+                && !front.Contains(speed.Id) && videoProfile.BackPresetIds?.Contains(speed.Id) != true)
+            {
+                if (front.Count < ToolbarProfile.MaxSlices)
+                {
+                    var avi = front.IndexOf("to-avi");
+                    front.Insert(avi < 0 ? front.Count : avi + 1, speed.Id);
+                    changed = true;
+                }
+                else if (videoProfile.BackPresetIds is { } back && back.Count < ToolbarProfile.MaxSlices)
+                {
+                    InsertBefore(back, speed.Id, "zip-all");
+                    changed = true;
+                }
+            }
+        }
         return changed;
     }
 

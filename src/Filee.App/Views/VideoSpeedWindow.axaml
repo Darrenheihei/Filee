@@ -1,0 +1,62 @@
+<!-- Change video speed: shown before videos change their playback speed from the donut (RadialController). The
+     factor chosen here is how fast each video plays (x0.1 to x10, the sound's pitch kept); the hint reads how long
+     the results will be. Apply starts the conversion; Cancel or closing the window starts nothing. -->
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Filee.App.ViewModels"
+        x:Class="Filee.App.Views.VideoSpeedWindow"
+        x:DataType="vm:VideoSpeedViewModel"
+        Title="{DynamicResource preset.change_speed}"
+        Icon="avares://Filee/Assets/Icons/filee.ico"
+        Width="520" Height="440" MinWidth="440" MinHeight="360"
+        WindowStartupLocation="CenterScreen">
+  <DockPanel>
+    <Border DockPanel.Dock="Bottom" Padding="20,12" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource SubtleBorderBrush}"
+            Background="{DynamicResource SurfaceBrush}">
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+        <Button x:Name="Cancel" Content="{DynamicResource common.cancel}" Click="OnCancel" IsCancel="True" />
+        <Button x:Name="Apply" Classes="accent" Content="{DynamicResource video_speed.apply}" Click="OnApply"
+                IsDefault="True" IsEnabled="{Binding CanApply}" />
+      </StackPanel>
+    </Border>
+    <DockPanel Margin="20,18,20,14">
+      <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,12">
+        <TextBlock Classes="h2" Text="{DynamicResource preset.change_speed}" />
+        <TextBlock Classes="caption" TextWrapping="Wrap" Text="{DynamicResource video_speed.hint}" />
+      </StackPanel>
+      <!-- The speed, and how long the results will be. -->
+      <Border DockPanel.Dock="Bottom" Margin="0,12,0,0" Padding="14,12" CornerRadius="10"
+              Background="{DynamicResource SurfaceAltBrush}">
+        <StackPanel Spacing="10">
+          <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+            <TextBlock Grid.Column="0" Classes="label" VerticalAlignment="Center" Text="{DynamicResource video_speed.factor}" />
+            <Slider x:Name="SpeedSlider" Grid.Column="1" Minimum="0.1" Maximum="10" TickFrequency="0.01" IsSnapToTickEnabled="True"
+                    SmallChange="0.01" LargeChange="0.1" Value="{Binding Speed}"
+                    AutomationProperties.Name="{DynamicResource video_speed.factor}" />
+            <TextBlock Grid.Column="2" Classes="label" VerticalAlignment="Center" MinWidth="64" TextAlignment="Right" Text="{Binding SpeedText}" />
+          </Grid>
+          <!-- The speeds people ask for first; the slider keeps the steps between them. -->
+          <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center">
+            <Button x:Name="Quarter" Content="×0.25" Tag="0.25" Click="OnQuick" MinWidth="52" />
+            <Button x:Name="Half" Content="×0.5" Tag="0.5" Click="OnQuick" MinWidth="52" />
+            <Button x:Name="Normal" Content="×1" Tag="1" Click="OnQuick" MinWidth="52" />
+            <Button x:Name="OneAndHalf" Content="×1.5" Tag="1.5" Click="OnQuick" MinWidth="52" />
+            <Button x:Name="Double" Content="×2" Tag="2" Click="OnQuick" MinWidth="52" />
+            <Button x:Name="Quadruple" Content="×4" Tag="4" Click="OnQuick" MinWidth="52" />
+          </StackPanel>
+          <TextBlock x:Name="DurationHint" Classes="caption" IsVisible="{Binding HasDuration}" Text="{Binding DurationHint}" />
+        </StackPanel>
+      </Border>
+      <ListBox x:Name="Files" ItemsSource="{Binding Sources}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:VideoSpeedSource">
+            <Grid ColumnDefinitions="*,Auto" Margin="4,6">
+              <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding Path}" />
+              <TextBlock Grid.Column="1" Classes="caption" Margin="12,0,0,0" IsVisible="{Binding Seconds}" Text="{Binding Duration}" />
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </DockPanel>
+  </DockPanel>
+</Window>

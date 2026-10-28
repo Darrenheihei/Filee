@@ -863,6 +863,19 @@ public sealed class MediaOptions
     /// </summary>
     public bool AskSizePercent { get; set; }
 
+    /// <summary>
+    /// Play the video faster or slower: the picture is re-timed and the sound's pitch kept. x0.1 to x10; 1 keeps the
+    /// speed. The "Change video speed" slice asks for it in a window, like Compress video asks for a size.
+    /// </summary>
+    public double Speed { get; set; } = 1;
+
+    /// <summary><see cref="Speed"/> kept inside what FFmpeg does well (x0.1 to x10); 1 when the file holds nonsense.</summary>
+    [JsonIgnore]
+    public double SpeedFactor => double.IsFinite(Speed) ? Math.Clamp(Speed, 0.1, 10) : 1;
+
+    /// <summary>The donut asks for the playback speed in a window before this preset converts ("Change video speed").</summary>
+    public bool AskSpeed { get; set; }
+
     /// <summary>Audio bitrate in kbit/s for lossy audio; 0 uses a good default for the format.</summary>
     public int AudioBitrateKbps { get; set; }
 

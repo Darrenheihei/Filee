@@ -48,10 +48,12 @@ public sealed class WindowService(ILocalizer loc, IServiceProvider services, Mem
     private MergeOrderWindow? _mergeOrder;
     private PdfPageEditorWindow? _pdfPageEditor;
     private VideoCompressWindow? _videoCompress;
+    private VideoSpeedWindow? _videoSpeed;
 
     internal MergeOrderWindow? MergeOrder => _mergeOrder;
     internal PdfPageEditorWindow? PdfPageEditor => _pdfPageEditor;
     internal VideoCompressWindow? VideoCompress => _videoCompress;
+    internal VideoSpeedWindow? VideoSpeed => _videoSpeed;
 
     private void PrepareWindow(Window window) => services.GetService<ThemeService>()?.ApplyWindowClass(window);
 
@@ -111,6 +113,32 @@ public sealed class WindowService(ILocalizer loc, IServiceProvider services, Mem
         dialog.Activate();
         // The floor (the smallest the videos can get) is asked from ffprobe beside the open window.
         _ = vm.ProbeMinimumsAsync();
+        await closed.Task;
+        return dialog.Result;
+    }
+
+    /// <summary>
+    /// Asks how fast the videos of a "Change video speed" drop play: the factor each one is sped up or slowed by
+    /// (<see cref="VideoSpeedViewModel.MinSpeed"/> to <see cref="VideoSpeedViewModel.MaxSpeed"/>).
+    /// Null when the window was cancelled or closed.
+    /// </summary>
+    public async Task<double?> ChooseVideoSpeedAsync(IReadOnlyList<string> files)
+    {
+        _videoSpeed?.Close();
+        var vm = new VideoSpeedViewModel(files, loc);
+        var dialog = new VideoSpeedWindow { DataContext = vm };
+        PrepareWindow(dialog);
+        var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        dialog.Closed += (_, _) =>
+        {
+            if (_videoSpeed == dialog) _videoSpeed = null;
+            closed.TrySetResult();
+        };
+        _videoSpeed = dialog;
+        dialog.Show();
+        dialog.Activate();
+        // The durations (for the output-length hint) are asked from ffprobe beside the open window.
+        _ = vm.ProbeDurationsAsync();
         await closed.Task;
         return dialog.Result;
     }

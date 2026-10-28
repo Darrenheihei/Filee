@@ -117,6 +117,7 @@ public static class BuiltInData
         .. LivePhotoPresets(),
         .. ClipPresets(),
         .. MediaToolPresets(),
+        .. SpeedPresets(),
         .. MergeImagesPresets(),
         new() { Id = "to-docx", Name = "DOCX", TargetFormat = "docx" },
         new() { Id = "to-hwpx", Name = "HWPX", TargetFormat = "hwpx" },
@@ -290,6 +291,20 @@ public static class BuiltInData
             Image = { Quality = 90, KeepMetadata = false, KeepColorProfile = false, KeepSourceQuality = true },
             Pdf = { RemoveMetadata = true }, Media = { RemoveMetadata = true },
             Output = { FileNamePattern = "{name}_clean" },
+        },
+    ];
+
+    /// <summary>
+    /// "Change video speed" (added in settings schema 56): the donut asks for the playback speed in a window
+    /// (x0.1 to x10, the sound's pitch kept), like Compress video asks for a size. The video is encoded again at
+    /// that speed, in the format it came in.
+    /// </summary>
+    public static List<Preset> SpeedPresets() =>
+    [
+        new()
+        {
+            Id = "change-speed", NameKey = "preset.change_speed", TargetFormat = SameAsSource,
+            Media = { AskSpeed = true }, Output = { FileNamePattern = "{name}_speed" },
         },
     ];
 
@@ -670,7 +685,7 @@ public static class BuiltInData
         {
             Id = "video", NameKey = "profile.video",
             Extensions = ExtensionsOf(FormatCategory.Video),
-            PresetIds = ["to-mp4", "mp4-720", "mp4-hevc", "to-webm", "to-mov", "to-gif", "to-mp3", "extract-subtitles", "to-mkv", "to-avi"],
+            PresetIds = ["to-mp4", "mp4-720", "mp4-hevc", "to-webm", "to-mov", "to-gif", "to-mp3", "extract-subtitles", "to-mkv", "to-avi", "change-speed"],
             // Every frame as pictures is on no front (a long video gives thousands of files): behind a flip, a drop that
             // misses its slice doesn't start it. Live / Motion Photos of a clip are there too, and "Cut a clip" first
             // (in place of FLAC, which stays in the library).
